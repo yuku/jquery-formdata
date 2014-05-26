@@ -9,8 +9,6 @@ $.fn.formData = function () {
 
     'use strict';
 
-    if (!this[0] || this[0].tagName !== 'FORM') return {};
-
     var i, j, arr, name, value, ref, parts, part, last, isArray,
         data = this.serializeArray(),
         name_reg = /(\w+)|\[(\w*)\]/g,
