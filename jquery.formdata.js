@@ -9,17 +9,57 @@ $.fn.formData = function () {
 
     'use strict';
 
-    var i, j, arr, name, value, ref, parts, part, last, isArray,
+    function find(array, iter) {
+        for (var i = 0; i < array.length; i++) if (iter(array[i])) {
+            return array[i];
+        }
+    }
+
+    // Recursive name attribute parser.
+    function parse(parts, currRef, value) {
+        var nextRef, currPart, nextPart, first;
+        currPart = parts.shift();
+        nextPart = parts[0];
+
+        if (currPart === '') {
+            // currRef is an array.
+            if (nextPart == null) {
+                return currRef.push(value);
+            } else if (nextPart === '') {
+                throw "name contains '[][]'";
+            } else {
+                nextRef = find(currRef, function (ref) {
+                    return !ref.hasOwnProperty(nextPart);
+                });
+                if (nextRef == null) {
+                    nextRef = {};
+                    currRef.push(nextRef);
+                }
+            }
+        } else {
+            // currRef is an object.
+            if (nextPart == null) {
+                return currRef[currPart] = value;
+            } else if (nextPart === '') {
+                currRef[currPart] || (currRef[currPart] = []);
+            } else {
+                currRef[currPart] || (currRef[currPart] = {});
+            }
+            nextRef = currRef[currPart];
+        }
+        parse(parts, nextRef, value);
+    }
+
+    var i, arr, name, value, parts,
         data = this.serializeArray(),
         name_reg = /(\w+)|\[(\w*)\]/g,
-        result = {};
+        params = {};
 
     // Parse each input elements
     for (i = 0; i < data.length; i++) {
         name = data[i].name;
         value = data[i].value;
         parts = [];
-        ref = result;
 
         while (true) {
             arr = name_reg.exec(name);
@@ -27,23 +67,7 @@ $.fn.formData = function () {
             parts.push(arr[1] || arr[2]);
         }
 
-        // Whether the name attribute of current input elem ends with [].
-        isArray = parts[parts.length - 1] === '';
-        if (isArray) parts.pop();
-
-        last = parts.pop();
-        for (j = 0; j < parts.length; j++) {
-            part = parts[j];
-            if (!ref[part]) ref[part] = {};
-            ref = ref[part];
-        }
-
-        if (isArray) {
-            if (!ref[last]) ref[last] = [];
-            ref[last].push(value);
-        } else {
-            ref[last] = value;
-        }
+        parse(parts, params, value);
     }
-    return result;
+    return params;
 };
